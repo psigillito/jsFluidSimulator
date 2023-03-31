@@ -6,8 +6,7 @@
 	</head>
 	
 <body>
-	<canvas id="myCanvas" style="border:2px solid"></canvas>
-	
+	<canvas id="myCanvas" style="border:2px solid"></canvas>	
 <script>
 
 	var canvas = document.getElementById("myCanvas");
@@ -16,12 +15,7 @@
 	canvas.height = 800;
 	var res = 80;
 	var cellPixelWidth = canvas.width / res;
-
-
-
 	canvas.focus();
-
-	// ----------------- start of simulator ------------------------------
 
 	class Fluid {
 		constructor(numX, numY) {
@@ -29,27 +23,31 @@
 			this.columnCount = numX + 2;
 			this.numCells = numX * numY;
 			this.u = new Array(this.rowCount);
+			//X Velocities
 			for(var i = 0; i < this.rowCount; i++)
 			{
 				this.u[i] = new Float32Array(this.columnCount).fill(0);
-			}; //x velocities
+			}
+			//Y Velocities
 			this.v = new Array(this.rowCount);
 			for(var i = 0; i < this.rowCount; i++)
 			{
 				this.v[i] = new Float32Array(this.columnCount).fill(0.0); //y velocities
 			}
+			//Solid = 0 , Open = 1
 			this.s = new Array(this.rowCount);
 			for(var i = 0; i < this.rowCount; i++)
 			{
 				this.s[i] = new Float32Array(this.columnCount).fill(1.0);
-			}; //seidel val either 0 or 1 for solid or not
+			} 
+			//Pressure Values 
 			this.p = new Array(this.rowCount);
 			for(var i = 0; i < this.rowCount; i++)
 			{
 				this.p[i] = new Float32Array(this.columnCount).fill(0.0);
-			}; //pressure
+			}
 			
-			//fill last column and row with 1s for s 
+			//fill border around vector field with 1s 
 			for(var i = 0; i < this.columnCount; i++)
 			{
 				this.s[i][this.columnCount-1] = 0.0;
@@ -60,17 +58,21 @@
 
 				this.s[i][0] = 0.0;
 				this.s[i][1] = 0.0;
+				this.s[i][2] = 0.0;
+
 
 				this.s[this.rowCount - 2][i] = 0.0;
 				this.s[this.rowCount - 1][i] = 0.0;
 			}
-			var num = numX * numY;
+			//var num = numX * numY;
 
+			//new X velocities
 			this.newU = new Array(this.rowCount);
 			for(var i = 0; i < this.rowCount; i++)
 			{
 				this.newU[i] = new Float32Array(this.columnCount).fill(0);
-			}; //x velocities
+			}
+			//New Y Velocities
 			this.newV = new Array(this.rowCount);
 			for(var i = 0; i < this.rowCount; i++)
 			{
@@ -100,27 +102,13 @@
 		f = scene.fluid = new Fluid(res, res);
 	}
 
-
-	// draw -------------------------------------------------------
 	function draw() 
 	{
 		c.clearRect(0, 0, canvas.width, canvas.height);
-
-		c.fillStyle = "#FF4400";
-		f = scene.fluid;
-		
+		c.fillStyle = "#FF4400";		
 		id = c.getImageData(0,0, canvas.width, canvas.height)
-
-		var color = [255, 255, 255, 255]
-
 		c.putImageData(id, 0, 0);
 
-		c.beginPath();
-
-		c.fillRect(20, 20, 15, 15);
-		c.stroke();
-
-		//draw in corner 
 		for(i = 0; i < res; ++i) //for each row
 		{
 			for(j = 0; j < res; ++j)
@@ -145,22 +133,13 @@
 		drawVelocityLines();
 	}
 
-
-
-	// main -------------------------------------------------------
-
 	function simulate() 
 	{
 		solveIncompressibility(scene.dt);
-
-		//dos
 		advectVelocity(scene.dt);
-
 		//move particle
 		movementValueX = sampleSurroundingVelocities(scene.particleX, scene.particleY, 'u');
 		movementValueY = sampleSurroundingVelocities(scene.particleX, scene.particleY, 'v');
-
-		console.l
 		scene.particleX += movementValueX;
 		scene.particleY += movementValueY;	
 		scene.frameNr++;
@@ -175,15 +154,11 @@
 	setupScene();
 	update();
 	
-	//Mouse dragging logic -----------------------------------------
+	//Mouse dragging logic
 	var mouseDown = false;
 
 	function startDrag(x,y){
-		let bounds = canvas.getBoundingClientRect(); 
-		let mx = x - bounds.left - canvas.clientLeft;
-
 		mouseDown=true;
-
 		setObstacle(x,y,true);
 	}
 
@@ -209,21 +184,21 @@
 				vPixelCoord = convertToPixelCoordinate(j, i, cellPixelWidth,'v');
 
 				var uDistance = Math.sqrt(
-						Math.pow( (uPixelCoord[0] - x), 2) 
+						Math.pow( (uPixelCoord[0] - x),2) 
 						+ 
 						Math.pow( (uPixelCoord[1] - y),2));
 
 				var vDistance = Math.sqrt(
-						Math.pow( (vPixelCoord[0] - x), 2) 
+						Math.pow( (vPixelCoord[0] - x),2) 
 						+ 
 						Math.pow( (vPixelCoord[1] - y),2));
 
 				//check u first
-				if(	uDistance < 40  && scene.fluid.s[i][j] != 0.0)
+				if(	uDistance < 40  && scene.fluid.s[i][j] != 0.0 && scene.fluid.s[i][j-1] != 0.0 )  
 				{
 					scene.fluid.u[i][j] = 0.01 * velocityX;
 				} 
-				if(vDistance < 40 && scene.fluid.s[i][j] != 0.0)
+				if(vDistance < 40 && scene.fluid.s[i][j] != 0.0 && scene.fluid.s[i-1][j] != 0.0)
 				{
 					scene.fluid.v[i][j] = 0.01 * velocityY;
 				}
@@ -231,13 +206,11 @@
 		}
 	}
 
-
 	function drag(x, y) {
 		if (mouseDown) {
 			setObstacle(x,y, false);
 		}
 	}
-
 
 	function endDrag() {
 		mouseDown = false;
@@ -256,11 +229,8 @@
 	});
 
 
-
 	function drawVelocityLines()
 	{
-		//start with u 1,1
-
 		for(var i = 0; i < scene.fluid.rowCount; ++i){
 			for(var j = 0; j < scene.fluid.columnCount; ++j)
 			{
@@ -286,15 +256,6 @@
 			}
 		
 		}
-
-		c.beginPath();
-		c.moveTo(pixelCoords[0], pixelCoords[1]);
-		var xOffset = scene.fluid.u[1][1];
-		c.lineTo(pixelCoords[0] + xOffset, pixelCoords[1]);
-		
-		c.strokeStyle = 'red';
-		c.fill();
-		c.stroke();
 	}
 
 	function convertToPixelCoordinate(xValue, yValue, cellWidth, coordType)
@@ -321,13 +282,10 @@
 			var yIndex = Math.floor(pixelY/cellPixelWidth);
 			
 			var xNextIndex = xIndex+1 < scene.fluid.rowCount    ?  xIndex+1 : xIndex;
-
 			var uVelocityLeft = scene.fluid.u[yIndex][xIndex+1];
 			var uVelocityRight = scene.fluid.u[yIndex][xIndex];
 
-
 			var insideCellPositionX = pixelX % cellPixelWidth;
-
 			var leftWeight =  1.0 - ( (cellPixelWidth - insideCellPositionX) / cellPixelWidth);
 			var rightWeight =  1.0 - leftWeight;
 
@@ -347,12 +305,10 @@
 
 			var topWeight =  1.0 - ( (cellPixelWidth - insideCellPositionY) / cellPixelWidth);
 			var bottomWeight =  1.0 - topWeight;
-
 			var value = topWeight + bottomWeight;
 
 			var vVelocity = (bottomWeight*vVelocityTop + topWeight*vVelocityBelow);// + uVelocityLeft)*0.5; //need to weight by distance 
 			return vVelocity;
-
 		}
 	}
 
@@ -374,12 +330,10 @@
 	{
 		for(var j = 1; j < scene.fluid.columnCount-2; ++j)
 		{
-
 			//update u
 			//if this u and next u are not a solid object do advection 
-			if(scene.fluid.s[i][j] != 0.0 && scene.fluid.s[i-1][j] != 0.0 && scene.fluid.s[i][j-1] != 0.0)
+			if(scene.fluid.s[i][j] != 0.0 && scene.fluid.s[i][j-1] != 0.0)
 			{
-
 				//get current location in pixels 
 				var pixelX = j * cellPixelWidth;
 				var pixelY = i * cellPixelWidth + (cellPixelWidth/2);
@@ -396,8 +350,9 @@
 
 				var newVal = sampleSurroundingVelocities(oldPixelX,oldPixelY, 'u');
 				scene.fluid.newU[i][j] = newVal;
-
-
+			}
+			if(scene.fluid.s[i][j] != 0.0 && scene.fluid.s[i-1][j] != 0.0)
+			{
 				//get current location in pixels 
 				pixelX = j * cellPixelWidth + (cellPixelWidth/2);
 				pixelY = i * cellPixelWidth;
@@ -414,28 +369,20 @@
 
 				var newVal = sampleSurroundingVelocities(oldPixelX,oldPixelY, 'v');
 				scene.fluid.newV[i][j] = newVal;
-
-
 			}
 		}
 	}
 
 
-	for(var i = 1; i < scene.fluid.rowCount-1; ++i)
+	for(var i = 0; i < scene.fluid.rowCount; ++i)
 	{
-		for(var j = 1; j < scene.fluid.columnCount-1; ++j)
+		for(var j = 0; j < scene.fluid.columnCount; ++j)
 		{
 			scene.fluid.u[i][j] = scene.fluid.newU[i][j];
 			scene.fluid.v[i][j] = scene.fluid.newV[i][j];
 		}
 	}
-
-	//("finished copying");
-	}
-
-
-
-
+}
 
 
 	function solveIncompressibility(dt)
@@ -465,7 +412,6 @@
 						continue;
 					}
 
-
 					var u1 = scene.fluid.u[i][j];
 					var u2 = scene.fluid.u[i][j+1];
 
@@ -474,7 +420,6 @@
 
 					var divergence = u2 - u1 + v2 - v1;
 					
-					//console.log("TOTAL", sTotal);
 					var pressure = -divergence / sTotal;
 					pressure *= 1.9;
 					scene.fluid.p[i][j] += cp * pressure;
@@ -487,23 +432,6 @@
 			}
 		}
 	}
-
-
-
-
-			//console.log("DIVERGENCE for u2 :", u2, u1, v2, v1, divergence)
-
-
-			//
-			//solve divergence for each cell 
-			//then adjust divergence 
-		
-	
-
-
-
-
-
 </script> 
 </body>
 </html>
